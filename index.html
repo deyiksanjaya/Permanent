@@ -258,6 +258,12 @@
             isPointerDown = true;
             hasDragged = false;
             startPos = getPos(e);
+
+            // *** CORE FIX: Process the first touch point immediately ***
+            // This prevents a drag from starting without the initial point being registered.
+            const currentPos = getPos(e);
+            checkTouch(currentPos.x, currentPos.y);
+            coverWithStroke(currentPos.x, currentPos.y);
         }
 
         function handleMove(e) {
@@ -267,16 +273,13 @@
             const currentPos = getPos(e);
             const distance = Math.hypot(currentPos.x - startPos.x, currentPos.y - startPos.y);
 
-            // Only start drawing if the pointer has moved beyond the threshold
             if (distance > DRAG_THRESHOLD) {
                 hasDragged = true;
             }
 
-            if (hasDragged) {
-                // *** CORE FIX: Check for protection BEFORE erasing. ***
-                checkTouch(currentPos.x, currentPos.y);
-                coverWithStroke(currentPos.x, currentPos.y);
-            }
+            // No longer gated by hasDragged, drawing happens on any move
+            checkTouch(currentPos.x, currentPos.y);
+            coverWithStroke(currentPos.x, currentPos.y);
         }
 
         function handleEnd() {
