@@ -241,7 +241,7 @@
             tapTimestamps.push(now);
             // Keep only taps from the last 2 seconds
             tapTimestamps = tapTimestamps.filter(timestamp => now - timestamp < 2000);
-            if (tapTimestamps.length >= 5) {
+            if (tapTimestamps.length >= 3) {
                 localStorage.removeItem(STORAGE_KEY);
                 tapTimestamps = []; // Reset taps
                 // Briefly flash the screen to confirm reset
