@@ -196,8 +196,14 @@
                 const protectedSymbol = symbolStates.find(s => s.value === protectedSymbolValue);
                 if (protectedSymbol) {
                     const b = protectedSymbol.bounds;
-                    if (x > b.x && x < b.x + b.width && y > b.y && y < b.y + b.height) {
-                        return; // Do not draw if over the protected symbol
+                    
+                    // *** CORE FIX: Robust circle-rectangle intersection check ***
+                    const closestX = Math.max(b.x, Math.min(x, b.x + b.width));
+                    const closestY = Math.max(b.y, Math.min(y, b.y + b.height));
+                    const distance = Math.hypot(x - closestX, y - closestY);
+
+                    if (distance < ERASER_SIZE) {
+                        return; // Do not draw if the eraser circle intersects the protected bounds
                     }
                 }
             }
@@ -259,8 +265,7 @@
             hasDragged = false;
             startPos = getPos(e);
 
-            // *** CORE FIX: Process the first touch point immediately ***
-            // This prevents a drag from starting without the initial point being registered.
+            // Process the first touch point immediately
             const currentPos = getPos(e);
             checkTouch(currentPos.x, currentPos.y);
             coverWithStroke(currentPos.x, currentPos.y);
@@ -277,7 +282,7 @@
                 hasDragged = true;
             }
 
-            // No longer gated by hasDragged, drawing happens on any move
+            // Drawing happens on any move, even small ones
             checkTouch(currentPos.x, currentPos.y);
             coverWithStroke(currentPos.x, currentPos.y);
         }
