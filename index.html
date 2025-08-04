@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ESP Symbol Online</title>
+    <title>Symbolic Echo</title>
     
     <!-- PWA and Mobile App Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -241,7 +241,7 @@
             tapTimestamps.push(now);
             // Keep only taps from the last 2 seconds
             tapTimestamps = tapTimestamps.filter(timestamp => now - timestamp < 2000);
-            if (tapTimestamps.length >= 3) {
+            if (tapTimestamps.length >= 5) {
                 localStorage.removeItem(STORAGE_KEY);
                 tapTimestamps = []; // Reset taps
                 // Briefly flash the screen to confirm reset
@@ -273,8 +273,9 @@
             }
 
             if (hasDragged) {
-                coverWithStroke(currentPos.x, currentPos.y);
+                // *** CORE FIX: Check for protection BEFORE erasing. ***
                 checkTouch(currentPos.x, currentPos.y);
+                coverWithStroke(currentPos.x, currentPos.y);
             }
         }
 
