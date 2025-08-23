@@ -182,6 +182,28 @@
         }
 
         /**
+         * Draws the greeting text on the TOP canvas.
+         */
+        function drawOverlayGreeting() {
+            const clientWidth = topCanvas.clientWidth;
+            const centerX = clientWidth / 2;
+            const topTextMargin = 60;
+            const lineSpacing = 35; 
+            const textPadding = 20;
+            const maxWidth = clientWidth - (textPadding * 2);
+
+            topCtx.fillStyle = '#e0e0e0';
+            topCtx.textAlign = 'center';
+            
+            topCtx.font = '40px Cinzel';
+            topCtx.fillText(`Hi ${spectatorName},`, centerX, topTextMargin);
+            
+            topCtx.font = '20px Cinzel';
+            const instructionText = 'Please think of one of the ESP symbols below.';
+            wrapText(topCtx, instructionText, centerX, topTextMargin + lineSpacing, maxWidth, 22);
+        }
+
+        /**
          * Draws the symbols and vignette on the bottom canvas.
          */
         function drawContentOnBottomCanvas() {
@@ -189,7 +211,6 @@
             const clientHeight = bottomCanvas.clientHeight;
             
             if (clientWidth === 0 || clientHeight === 0) {
-                // If canvas has no size yet, wait for the next frame
                 requestAnimationFrame(drawContentOnBottomCanvas);
                 return;
             }
@@ -205,28 +226,12 @@
             bottomCtx.fillStyle = gradient;
             bottomCtx.fillRect(0, 0, clientWidth, clientHeight);
             
-            // --- Draw Text ---
-            const topTextMargin = 60; // Increased margin from the top
-            const lineSpacing = 35; 
-            const textPadding = 20;
-            const maxWidth = clientWidth - (textPadding * 2);
-
-            bottomCtx.fillStyle = '#e0e0e0';
-            bottomCtx.textAlign = 'center';
-            
-            bottomCtx.font = '40px Cinzel'; // Increased font size
-            bottomCtx.fillText(`Hi ${spectatorName},`, centerX, topTextMargin);
-            
-            bottomCtx.font = '20px Cinzel'; // Increased font size
-            const instructionText = 'Please think of one of the ESP symbols below.';
-            const lastTextY = wrapText(bottomCtx, instructionText, centerX, topTextMargin + lineSpacing, maxWidth, 22);
-            
             // --- Draw Symbols ---
             bottomCtx.strokeStyle = '#e0e0e0';
             bottomCtx.lineWidth = Math.min(clientWidth, clientHeight) / 100;
             bottomCtx.lineCap = 'round';
             
-            const symbolAreaYStart = lastTextY + 30;
+            const symbolAreaYStart = 150; // Use a fixed start position for symbols
             const symbolAreaHeight = clientHeight - symbolAreaYStart - 20;
             const symbolAreaWidth = clientWidth;
             
@@ -264,8 +269,6 @@
          * Resets the board to its initial state.
          */
         function resetBoard() {
-            isRevealed = false;
-            protectedSymbolValue = null;
             modalIsQueued = false; // Reset the modal flag
             symbolStates = symbols.map(s => ({ 
                 value: s.value, 
@@ -275,8 +278,9 @@
             
             drawContentOnBottomCanvas();
             
-            // Make the top canvas fully transparent
+            // Make the top canvas fully transparent and draw the greeting on it
             topCtx.clearRect(0, 0, topCanvas.width, topCanvas.height);
+            drawOverlayGreeting();
         }
 
         /**
@@ -284,11 +288,19 @@
          */
         function loadState() {
             const savedValue = localStorage.getItem(STORAGE_KEY);
-            resetBoard(); // Start with a fresh board
-            if (isPerformanceMode && savedValue) {
+            if (savedValue) {
+                const savedState = JSON.parse(savedValue);
                 isRevealed = true;
-                protectedSymbolValue = parseInt(savedValue, 10);
+                protectedSymbolValue = savedState.symbol;
+                spectatorName = savedState.name;
+            } else {
+                isRevealed = false;
+                protectedSymbolValue = null;
+                if (!isPerformanceMode) {
+                    spectatorName = "Guest";
+                }
             }
+            resetBoard();
         }
 
         /**
@@ -308,7 +320,6 @@
                 }
             }
             
-            // Create a gradient that matches the bottom canvas for the stroke
             const centerX = topCanvas.clientWidth / 2;
             const centerY = topCanvas.clientHeight / 2;
             const outerRadius = Math.sqrt(centerX * centerX + centerY * centerY);
@@ -320,6 +331,9 @@
             topCtx.beginPath();
             topCtx.arc(x, y, ERASER_SIZE, 0, Math.PI * 2, false);
             topCtx.fill();
+
+            // Redraw the greeting on top of the erase stroke
+            drawOverlayGreeting();
         }
 
         /**
@@ -337,24 +351,28 @@
 
             const touchedSymbols = symbolStates.filter(s => s.touched);
 
-            if (isPerformanceMode) {
-                // Performance Mode: Freeze the last symbol
+            if (isPerformanceMode || protectedSymbolValue !== null) {
                 if (touchedSymbols.length === 4) {
                     const untouchedSymbol = symbolStates.find(s => !s.touched);
                     if (untouchedSymbol) {
                         protectedSymbolValue = untouchedSymbol.value;
                         isRevealed = true;
-                        localStorage.setItem(STORAGE_KEY, protectedSymbolValue.toString());
+                        if (isPerformanceMode) {
+                            const stateToSave = {
+                                symbol: protectedSymbolValue,
+                                name: spectatorName
+                            };
+                            localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+                        }
                     }
                 }
             } else {
-                // Practice Mode: Show modal when all are erased, but only once.
                 if (touchedSymbols.length === 5 && !modalIsQueued) {
-                    modalIsQueued = true; // Set flag to prevent re-triggering
+                    modalIsQueued = true;
                     setTimeout(() => {
                         failModal.classList.remove('hidden');
                         failModal.classList.add('flex');
-                    }, 2000); // 2-second delay
+                    }, 2000);
                 }
             }
         }
@@ -372,7 +390,10 @@
                 document.body.style.backgroundColor = 'white';
                 setTimeout(() => {
                     document.body.style.backgroundColor = 'black';
-                    loadState();
+                    spectatorName = "Guest";
+                    isRevealed = false;
+                    protectedSymbolValue = null;
+                    resetBoard();
                 }, 100);
             }
         }
@@ -433,14 +454,11 @@
                 let decoded = customDecode(decodeURIComponent(encodedName));
                 spectatorName = decoded.charAt(0).toUpperCase() + decoded.slice(1);
                 
-                // Remove the parameter from the URL after it's been used
                 history.replaceState(null, '', window.location.pathname);
-                // Push a new state to prevent going back
                 history.pushState(null, '', window.location.pathname);
 
             } else {
                 isPerformanceMode = false;
-                spectatorName = "Guest"; // Or keep it as "Guest"
             }
 
             setupCanvases();
@@ -473,7 +491,15 @@
         });
 
         // --- Start the application ---
-        window.onload = initialize;
+        async function main() {
+            // Wait until all fonts in the document are loaded and ready.
+            await document.fonts.ready;
+            
+            // Now that fonts are ready, we can initialize the rest of the app.
+            initialize();
+        }
+
+        main();
 
     </script>
 </body>
