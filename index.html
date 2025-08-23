@@ -71,7 +71,7 @@
 
     <!-- Fail Modal -->
     <div id="failModal" class="fixed inset-0 bg-black bg-opacity-90 flex-col items-center justify-center hidden z-50 p-4 text-center">
-        <h2 class="cinzel-font text-2xl text-white mb-4">Maybe you're not focused enough.<br>Seek ESP masters for help</h2>
+        <h2 class="cinzel-font text-2xl text-white mb-4">You need to really channel your thought.<br>Seek ESP masters for help</h2>
         <button id="tryAgainButton" class="premium-button text-white font-semibold px-6 py-3 rounded-lg">Try Again</button>
     </div>
 
@@ -491,15 +491,13 @@
         });
 
         // --- Start the application ---
-        async function main() {
+        window.onload = async function() {
             // Wait until all fonts in the document are loaded and ready.
             await document.fonts.ready;
             
             // Now that fonts are ready, we can initialize the rest of the app.
             initialize();
         }
-
-        main();
 
     </script>
 </body>
