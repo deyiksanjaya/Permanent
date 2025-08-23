@@ -1,635 +1,480 @@
 <!DOCTYPE html>
-
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-
     <title>ESP Symbol Online</title>
-
     
-
     <!-- PWA and Mobile App Tags -->
-
     <meta name="apple-mobile-web-app-capable" content="yes">
-
     <meta name="mobile-web-app-capable" content="yes">
-
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
     <meta name="apple-mobile-web-app-title" content="ESP">
-
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/95/95240.png">
-
     <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/95/95240.png">
 
-
     <script src="https://cdn.tailwindcss.com"></script>
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
-
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
-
     <style>
-
         body {
-
             font-family: 'Inter', sans-serif;
-
             touch-action: none;
-
             user-select: none;
-
             -webkit-user-select: none;
-
             -ms-user-select: none;
-
             overflow: hidden;
-
             margin: 0;
-
             background-color: #000; /* Solid black background */
-
         }
-
         #canvas-wrapper {
-
             position: relative;
-
             width: 100vw;
-
             height: 100vh;
-
         }
-
         canvas {
-
             position: absolute;
-
             top: 0;
-
             left: 0;
-
             width: 100%;
-
             height: 100%;
-
         }
-
         #top-canvas {
-
             cursor: crosshair;
-
         }
-
+        .cinzel-font {
+            font-family: 'Cinzel', serif;
+        }
+        .premium-button {
+            background: linear-gradient(45deg, #3a3a3a, #1a1a1a);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            transition: all 0.3s ease;
+        }
+        .premium-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 180, 100, 0.2);
+            border-color: rgba(220, 180, 100, 0.5);
+        }
     </style>
-
 </head>
-
 <body>
 
-
     <div id="canvas-wrapper">
-
         <!-- Bottom canvas for the symbols -->
-
         <canvas id="bottom-canvas"></canvas>
-
         <!-- Top canvas for the opaque cover and erasing -->
-
         <canvas id="top-canvas"></canvas>
-
     </div>
 
+    <!-- Fail Modal -->
+    <div id="failModal" class="fixed inset-0 bg-black bg-opacity-90 flex-col items-center justify-center hidden z-50 p-4 text-center">
+        <h2 class="cinzel-font text-2xl text-white mb-4">Maybe you're not focused enough.<br>Seek ESP masters for help</h2>
+        <button id="tryAgainButton" class="premium-button text-white font-semibold px-6 py-3 rounded-lg">Try Again</button>
+    </div>
 
     <script>
-
         // --- Canvas and Context Setup ---
-
         const bottomCanvas = document.getElementById('bottom-canvas');
-
         const bottomCtx = bottomCanvas.getContext('2d');
-
         const topCanvas = document.getElementById('top-canvas');
-
         const topCtx = topCanvas.getContext('2d');
-
+        const failModal = document.getElementById('failModal');
+        const tryAgainButton = document.getElementById('tryAgainButton');
 
         // --- State Variables ---
-
         let isPointerDown = false; // Tracks if mouse/finger is down
-
-        let hasDragged = false;    // Tracks if movement has occurred
-
+        let hasDragged = false;   // Tracks if movement has occurred
         let startPos = { x: 0, y: 0 }; // Stores starting position of interaction
-
-        const DRAG_THRESHOLD = 5;      // Min pixels to move to be considered a drag
-
+        const DRAG_THRESHOLD = 5;     // Min pixels to move to be considered a drag
 
         let isRevealed = false; 
-
         let protectedSymbolValue = null;
-
         const ERASER_SIZE = 35;
-
         const STORAGE_KEY = 'symbolicEchoProtected';
-
         let tapTimestamps = [];
-
+        let spectatorName = "Guest"; // Default name
+        let isPerformanceMode = false; // Determines if the freeze logic is active
+        let modalIsQueued = false; // Flag to prevent multiple modal triggers
 
         // --- Symbol Data ---
-
         const symbols = [
-
             { name: 'Circle', value: 1, draw: (c, x, y, s) => { c.arc(x, y, s * 0.35, 0, Math.PI * 2); } },
-
             { name: 'Cross', value: 2, draw: (c, x, y, s) => { c.moveTo(x, y - s * 0.35); c.lineTo(x, y + s * 0.35); c.moveTo(x - s * 0.35, y); c.lineTo(x + s * 0.35, y); } },
-
             { name: 'Wavy Lines', value: 3, draw: (c, x, y, s) => {
-
                 for (let i = -1; i <= 1; i++) {
-
                     c.moveTo(x - s * 0.3, y + s * 0.2 * i);
-
                     c.quadraticCurveTo(x - s * 0.15, y + s * 0.2 * i - s * 0.2, x, y + s * 0.2 * i);
-
                     c.quadraticCurveTo(x + s * 0.15, y + s * 0.2 * i + s * 0.2, x + s * 0.3, y + s * 0.2 * i);
-
                 }
-
             } },
-
             { name: 'Square', value: 4, draw: (c, x, y, s) => { c.rect(x - s * 0.35, y - s * 0.35, s * 0.7, s * 0.7); } },
-
             { name: 'Star', value: 5, draw: (c, x, y, s) => {
-
                 c.moveTo(x, y - s * 0.35);
-
                 for (let i = 1; i < 5; i++) {
-
                     c.lineTo(x + Math.sin(i * 0.8 * Math.PI) * s * 0.35, y - Math.cos(i * 0.8 * Math.PI) * s * 0.35);
-
                 }
-
                 c.closePath();
-
             } }
-
         ];
-
 
         let symbolStates = [];
 
+        /**
+         * Decodes a string from the custom encoding.
+         * @param {string} encodedText - The string to decode.
+         * @returns {string} The decoded string.
+         */
+        function customDecode(encodedText) {
+            const reverseCharMap = {
+                '@': 'a', '8': 'b', '[': 'c', ')': 'd', '3': 'e', 'F': 'f', '6': 'g', '#': 'h', '!': 'i', 'J': 'j', 'K': 'k', '1': 'l', 'M': 'm', '^': 'n', '0': 'o', 'P': 'p', '9': 'q', 'R': 'r', '$': 's', '+': 't', 'U': 'u', 'V': 'v', 'W': 'w', 'X': 'x', 'Y': 'y', '2': 'z', '_': ' '
+            };
+            let decoded = '';
+            for (let i = 0; i < encodedText.length; i++) {
+                const char = encodedText[i];
+                decoded += reverseCharMap[char] || char;
+            }
+            return decoded;
+        }
+        
+        /**
+         * A helper function to draw text on a canvas with automatic line breaks.
+         */
+        function wrapText(context, text, x, y, maxWidth, lineHeight) {
+            let words = text.split(' ');
+            let line = '';
+            let currentY = y;
+
+            for (let n = 0; n < words.length; n++) {
+                let testLine = line + words[n] + ' ';
+                let metrics = context.measureText(testLine);
+                let testWidth = metrics.width;
+                if (testWidth > maxWidth && n > 0) {
+                    context.fillText(line, x, currentY);
+                    line = words[n] + ' ';
+                    currentY += lineHeight;
+                } else {
+                    line = testLine;
+                }
+            }
+            context.fillText(line.trim(), x, currentY);
+            return currentY; 
+        }
 
         /**
-
          * Sets up both canvases.
-
          */
-
         function setupCanvases() {
-
             const dpr = window.devicePixelRatio || 1;
-
             const rect = topCanvas.getBoundingClientRect();
-
             
-
             topCanvas.width = rect.width * dpr;
-
             topCanvas.height = rect.height * dpr;
-
             topCtx.scale(dpr, dpr);
 
-
             bottomCanvas.width = rect.width * dpr;
-
             bottomCanvas.height = rect.height * dpr;
-
             bottomCtx.scale(dpr, dpr);
-
             
-
             loadState();
-
         }
 
-
         /**
-
          * Draws the symbols and vignette on the bottom canvas.
-
          */
+        function drawContentOnBottomCanvas() {
+            const clientWidth = bottomCanvas.clientWidth;
+            const clientHeight = bottomCanvas.clientHeight;
+            
+            if (clientWidth === 0 || clientHeight === 0) {
+                // If canvas has no size yet, wait for the next frame
+                requestAnimationFrame(drawContentOnBottomCanvas);
+                return;
+            }
 
-        function drawSymbolsOnBottomCanvas() {
-
-            const centerX = bottomCanvas.clientWidth / 2;
-
-            const centerY = bottomCanvas.clientHeight / 2;
-
+            const centerX = clientWidth / 2;
+            const centerY = clientHeight / 2;
             const outerRadius = Math.sqrt(centerX * centerX + centerY * centerY);
-
 
             const gradient = bottomCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, outerRadius);
-
             gradient.addColorStop(0, '#1a1a1a'); // Dark gray center
-
             gradient.addColorStop(1, '#000000'); // Black edges
 
-
             bottomCtx.fillStyle = gradient;
-
-            bottomCtx.fillRect(0, 0, bottomCanvas.clientWidth, bottomCanvas.clientHeight);
-
+            bottomCtx.fillRect(0, 0, clientWidth, clientHeight);
             
+            // --- Draw Text ---
+            const topTextMargin = 60; // Increased margin from the top
+            const lineSpacing = 35; 
+            const textPadding = 20;
+            const maxWidth = clientWidth - (textPadding * 2);
 
+            bottomCtx.fillStyle = '#e0e0e0';
+            bottomCtx.textAlign = 'center';
+            
+            bottomCtx.font = '40px Cinzel'; // Increased font size
+            bottomCtx.fillText(`Hi ${spectatorName},`, centerX, topTextMargin);
+            
+            bottomCtx.font = '25px Cinzel'; // Increased font size
+            const instructionText = 'Please think of one of the ESP symbols below.';
+            const lastTextY = wrapText(bottomCtx, instructionText, centerX, topTextMargin + lineSpacing, maxWidth, 22);
+            
+            // --- Draw Symbols ---
             bottomCtx.strokeStyle = '#e0e0e0';
-
-            bottomCtx.lineWidth = Math.min(bottomCanvas.clientWidth, bottomCanvas.clientHeight) / 100;
-
+            bottomCtx.lineWidth = Math.min(clientWidth, clientHeight) / 100;
             bottomCtx.lineCap = 'round';
-
             
-
+            const symbolAreaYStart = lastTextY + 30;
+            const symbolAreaHeight = clientHeight - symbolAreaYStart - 20;
+            const symbolAreaWidth = clientWidth;
+            
             const gridSize = 3;
-
-            const minDim = Math.min(bottomCanvas.clientWidth, bottomCanvas.clientHeight);
-
+            const minDim = Math.min(symbolAreaWidth, symbolAreaHeight);
             const cellSize = minDim / gridSize;
-
             const symbolSize = cellSize * 0.8;
-
             
-
-            const offsetX = (bottomCanvas.clientWidth - minDim) / 2;
-
-            const offsetY = (bottomCanvas.clientHeight - minDim) / 2;
-
+            const offsetX = (clientWidth - minDim) / 2;
+            const offsetY = symbolAreaYStart + (symbolAreaHeight - minDim) / 2;
 
             const positions = [
-
                 { row: 0, col: 0 }, { row: 0, col: 2 },
-
                 { row: 2, col: 0 }, { row: 2, col: 2 },
-
                 { row: 1, col: 1 }
-
             ];
 
-
             symbolStates.forEach((state, i) => {
-
                 const symbol = symbols[i];
-
                 const x = offsetX + (positions[i].col + 0.5) * cellSize;
-
                 const y = offsetY + (positions[i].row + 0.5) * cellSize;
-
                 
-
                 state.bounds = {
-
                     x: x - cellSize / 2, y: y - cellSize / 2,
-
                     width: cellSize, height: cellSize
-
                 };
-
                 
-
                 bottomCtx.beginPath();
-
                 symbol.draw(bottomCtx, x, y, symbolSize);
-
                 bottomCtx.stroke();
-
             });
-
         }
 
-
         /**
-
          * Resets the board to its initial state.
-
          */
-
         function resetBoard() {
-
             isRevealed = false;
-
             protectedSymbolValue = null;
-
+            modalIsQueued = false; // Reset the modal flag
             symbolStates = symbols.map(s => ({ 
-
                 value: s.value, 
-
                 touched: false,
-
                 bounds: {} 
-
             }));
-
             
-
-            drawSymbolsOnBottomCanvas();
-
+            drawContentOnBottomCanvas();
             
-
             // Make the top canvas fully transparent
-
             topCtx.clearRect(0, 0, topCanvas.width, topCanvas.height);
-
         }
 
-
         /**
-
          * Loads state from localStorage to see if the app is in "decoy" mode.
-
          */
-
         function loadState() {
-
             const savedValue = localStorage.getItem(STORAGE_KEY);
-
             resetBoard(); // Start with a fresh board
-
-            if (savedValue) {
-
+            if (isPerformanceMode && savedValue) {
                 isRevealed = true;
-
                 protectedSymbolValue = parseInt(savedValue, 10);
-
             }
-
         }
 
-
         /**
-
          * Covers a portion of the top canvas by drawing a stroke that matches the vignette.
-
          */
-
         function coverWithStroke(x, y) {
-
             if (isRevealed) {
-
                 const protectedSymbol = symbolStates.find(s => s.value === protectedSymbolValue);
-
                 if (protectedSymbol) {
-
                     const b = protectedSymbol.bounds;
-
                     const closestX = Math.max(b.x, Math.min(x, b.x + b.width));
-
                     const closestY = Math.max(b.y, Math.min(y, b.y + b.height));
-
                     const distance = Math.hypot(x - closestX, y - closestY);
-
                     if (distance < ERASER_SIZE) {
-
                         return;
-
                     }
-
                 }
-
             }
-
             
-
             // Create a gradient that matches the bottom canvas for the stroke
-
             const centerX = topCanvas.clientWidth / 2;
-
             const centerY = topCanvas.clientHeight / 2;
-
             const outerRadius = Math.sqrt(centerX * centerX + centerY * centerY);
-
             const gradient = topCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, outerRadius);
-
             gradient.addColorStop(0, '#1a1a1a');
-
             gradient.addColorStop(1, '#000000');
-
             
-
             topCtx.fillStyle = gradient;
-
             topCtx.beginPath();
-
             topCtx.arc(x, y, ERASER_SIZE, 0, Math.PI * 2, false);
-
             topCtx.fill();
-
         }
 
-
         /**
-
          * Checks if the stroke has entered a symbol's area and marks it.
-
          */
-
         function checkTouch(x, y) {
-
             if (isRevealed) return;
 
-
             symbolStates.forEach(state => {
-
                 const b = state.bounds;
-
-                if (x > b.x && x < b.x + b.width && y > b.y && y < b.y + b.height) {
-
+                if (!state.touched && x > b.x && x < b.x + b.width && y > b.y && y < b.y + b.height) {
                     state.touched = true;
-
                 }
-
             });
-
 
             const touchedSymbols = symbolStates.filter(s => s.touched);
 
-            if (touchedSymbols.length === 4) {
-
-                const untouchedSymbol = symbolStates.find(s => !s.touched);
-
-                if (untouchedSymbol) {
-
-                    protectedSymbolValue = untouchedSymbol.value;
-
-                    isRevealed = true;
-
-                    localStorage.setItem(STORAGE_KEY, protectedSymbolValue.toString());
-
+            if (isPerformanceMode) {
+                // Performance Mode: Freeze the last symbol
+                if (touchedSymbols.length === 4) {
+                    const untouchedSymbol = symbolStates.find(s => !s.touched);
+                    if (untouchedSymbol) {
+                        protectedSymbolValue = untouchedSymbol.value;
+                        isRevealed = true;
+                        localStorage.setItem(STORAGE_KEY, protectedSymbolValue.toString());
+                    }
                 }
-
+            } else {
+                // Practice Mode: Show modal when all are erased, but only once.
+                if (touchedSymbols.length === 5 && !modalIsQueued) {
+                    modalIsQueued = true; // Set flag to prevent re-triggering
+                    setTimeout(() => {
+                        failModal.classList.remove('hidden');
+                        failModal.classList.add('flex');
+                    }, 2000); // 2-second delay
+                }
             }
-
         }
-
 
         /**
-
          * Handles the secret tap mechanism to reset the stored data.
-
          */
-
         function handleSecretReset() {
-
             const now = new Date().getTime();
-
             tapTimestamps.push(now);
-
             tapTimestamps = tapTimestamps.filter(timestamp => now - timestamp < 2000);
-
             if (tapTimestamps.length >= 3) {
-
                 localStorage.removeItem(STORAGE_KEY);
-
                 tapTimestamps = [];
-
                 document.body.style.backgroundColor = 'white';
-
                 setTimeout(() => {
-
                     document.body.style.backgroundColor = 'black';
-
                     loadState();
-
                 }, 100);
-
             }
-
         }
-
 
         // --- Event Listeners ---
-
         function handleStart(e) {
-
             isPointerDown = true;
-
             hasDragged = false;
-
             startPos = getPos(e);
 
-
             const currentPos = getPos(e);
-
             checkTouch(currentPos.x, currentPos.y);
-
             coverWithStroke(currentPos.x, currentPos.y);
-
         }
-
 
         function handleMove(e) {
-
             if (!isPointerDown) return;
-
             e.preventDefault();
-
             
-
             const currentPos = getPos(e);
-
             const distance = Math.hypot(currentPos.x - startPos.x, currentPos.y - startPos.y);
 
-
             if (distance > DRAG_THRESHOLD) {
-
                 hasDragged = true;
-
             }
-
 
             checkTouch(currentPos.x, currentPos.y);
-
             coverWithStroke(currentPos.x, currentPos.y);
-
         }
-
 
         function handleEnd() {
-
             if (!isPointerDown) return;
 
-
             if (!hasDragged) {
-
                 handleSecretReset();
-
             }
-
             
-
             isPointerDown = false;
-
         }
-
 
         function getPos(e) {
-
             const rect = topCanvas.getBoundingClientRect();
-
             const clientX = e.clientX || e.touches[0].clientX;
-
             const clientY = e.clientY || e.touches[0].clientY;
-
             return {
-
                 x: clientX - rect.left,
-
                 y: clientY - rect.top
-
             };
-
         }
 
+        // --- Initialize ---
+        function initialize() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const encodedName = urlParams.get('id');
+
+            if (encodedName) {
+                isPerformanceMode = true;
+                let decoded = customDecode(decodeURIComponent(encodedName));
+                spectatorName = decoded.charAt(0).toUpperCase() + decoded.slice(1);
+                
+                // Remove the parameter from the URL after it's been used
+                history.replaceState(null, '', window.location.pathname);
+                // Push a new state to prevent going back
+                history.pushState(null, '', window.location.pathname);
+
+            } else {
+                isPerformanceMode = false;
+                spectatorName = "Guest"; // Or keep it as "Guest"
+            }
+
+            setupCanvases();
+        }
 
         // Mouse Events
-
         window.addEventListener('mousedown', handleStart);
-
         window.addEventListener('mousemove', handleMove);
-
         window.addEventListener('mouseup', handleEnd);
-
         window.addEventListener('mouseleave', handleEnd);
 
-
         // Touch Events
-
         window.addEventListener('touchstart', handleStart, { passive: false });
-
         window.addEventListener('touchmove', handleMove, { passive: false });
-
         window.addEventListener('touchend', handleEnd);
-
         window.addEventListener('touchcancel', handleEnd);
-
 
         window.addEventListener('resize', setupCanvases);
 
+        // Modal Button Listener
+        tryAgainButton.addEventListener('click', () => {
+            failModal.classList.add('hidden');
+            failModal.classList.remove('flex');
+            resetBoard();
+        });
 
-        // --- Initialize ---
+        // Prevent back navigation
+        window.addEventListener('popstate', function(event) {
+            history.pushState(null, '', window.location.pathname);
+        });
 
-        setupCanvases();
-
+        // --- Start the application ---
+        window.onload = initialize;
 
     </script>
-
 </body>
-
 </html>
-
-
