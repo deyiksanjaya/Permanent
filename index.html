@@ -71,7 +71,7 @@
 
     <!-- Fail Modal -->
     <div id="failModal" class="fixed inset-0 bg-black bg-opacity-90 flex-col items-center justify-center hidden z-50 p-4 text-center">
-        <h2 class="cinzel-font text-2xl text-white mb-4">You need to really channel your thought.<br>Seek ESP masters for help</h2>
+        <p class="cinzel-font text-2xl text-white mb-8">You need to really channel your thought.<br>Seek ESP masters for help</p>
         <button id="tryAgainButton" class="premium-button text-white font-semibold px-6 py-3 rounded-lg">Try Again</button>
     </div>
 
@@ -187,8 +187,8 @@
         function drawOverlayGreeting() {
             const clientWidth = topCanvas.clientWidth;
             const centerX = clientWidth / 2;
-            const topTextMargin = 60;
-            const lineSpacing = 35; 
+            const topTextMargin = 80;
+            const lineSpacing = 50; 
             const textPadding = 20;
             const maxWidth = clientWidth - (textPadding * 2);
 
@@ -200,7 +200,7 @@
             
             topCtx.font = '20px Cinzel';
             const instructionText = 'Please think of one of the ESP symbols below.';
-            wrapText(topCtx, instructionText, centerX, topTextMargin + lineSpacing, maxWidth, 22);
+            wrapText(topCtx, instructionText, centerX, topTextMargin + lineSpacing, maxWidth, 28);
         }
 
         /**
@@ -231,7 +231,7 @@
             bottomCtx.lineWidth = Math.min(clientWidth, clientHeight) / 100;
             bottomCtx.lineCap = 'round';
             
-            const symbolAreaYStart = 150; // Use a fixed start position for symbols
+            const symbolAreaYStart = 200; // Use a fixed start position for symbols
             const symbolAreaHeight = clientHeight - symbolAreaYStart - 20;
             const symbolAreaWidth = clientWidth;
             
@@ -492,11 +492,16 @@
 
         // --- Start the application ---
         window.onload = async function() {
-            // Wait until all fonts in the document are loaded and ready.
-            await document.fonts.ready;
-            
-            // Now that fonts are ready, we can initialize the rest of the app.
-            initialize();
+            try {
+                // Explicitly wait for the 'Cinzel' font to be ready at the sizes we use.
+                await document.fonts.load('40px Cinzel');
+                await document.fonts.load('20px Cinzel');
+            } catch (err) {
+                console.error('Font could not be loaded, using fallback:', err);
+            } finally {
+                // Now that fonts are ready (or have timed out), initialize the app.
+                initialize();
+            }
         }
 
     </script>
