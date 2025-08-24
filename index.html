@@ -94,7 +94,12 @@
         let protectedSymbolValue = null;
         const ERASER_SIZE = 35;
         const STORAGE_KEY = 'symbolicEchoProtected';
-        let tapTimestamps = [];
+        
+        // --- Triple Tap Reset Logic ---
+        let tapHistory = [];
+        const TRIPLE_TAP_TIME_THRESHOLD = 700; // Time window for taps in milliseconds
+        const TRIPLE_TAP_AREA_THRESHOLD = 50;  // Max distance between taps in pixels
+
         let spectatorName = "Guest"; // Default name
         let isPerformanceMode = false; // Determines if the freeze logic is active
         let modalIsQueued = false; // Flag to prevent multiple modal triggers
@@ -378,15 +383,37 @@
         }
 
         /**
-         * Handles the secret tap mechanism to reset the stored data.
+         * Handles the secret triple tap mechanism to reset the stored data.
+         * A valid triple tap must be quick and in the same location.
+         * @param {object} tapPos - The {x, y} position of the current tap.
          */
-        function handleSecretReset() {
+        function handleSecretReset(tapPos) {
             const now = new Date().getTime();
-            tapTimestamps.push(now);
-            tapTimestamps = tapTimestamps.filter(timestamp => now - timestamp < 2000);
-            if (tapTimestamps.length >= 3) {
+
+            // Add current tap to history
+            tapHistory.push({ time: now, pos: tapPos });
+
+            // Filter out taps that are too old
+            tapHistory = tapHistory.filter(tap => now - tap.time < TRIPLE_TAP_TIME_THRESHOLD);
+
+            // If we don't have enough taps, exit
+            if (tapHistory.length < 3) {
+                return;
+            }
+
+            // Check if all recent taps are in the same area by comparing to the first tap in the sequence
+            const firstTapPos = tapHistory[0].pos;
+            const allTapsInSameArea = tapHistory.every(tap => {
+                const distance = Math.hypot(tap.pos.x - firstTapPos.x, tap.pos.y - firstTapPos.y);
+                return distance < TRIPLE_TAP_AREA_THRESHOLD;
+            });
+
+            if (allTapsInSameArea) {
+                // If conditions are met, perform the reset
                 localStorage.removeItem(STORAGE_KEY);
-                tapTimestamps = [];
+                tapHistory = []; // Clear history after successful reset
+                
+                // Visual feedback for the reset
                 document.body.style.backgroundColor = 'white';
                 setTimeout(() => {
                     document.body.style.backgroundColor = 'black';
@@ -427,8 +454,10 @@
         function handleEnd() {
             if (!isPointerDown) return;
 
+            // A tap is considered an interaction that hasn't been dragged
             if (!hasDragged) {
-                handleSecretReset();
+                // Pass the tap's starting position to the reset handler
+                handleSecretReset(startPos);
             }
             
             isPointerDown = false;
