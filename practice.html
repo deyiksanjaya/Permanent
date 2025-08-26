@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Mind Focus Training</title>
+    
+    <!-- PWA and Mobile App Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Mind Focus">
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/95/95240.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+            background-color: #0d0b14;
+            color: #e0d8f0;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at top left, rgba(76, 0, 130, 0.3), transparent 40%),
+                        radial-gradient(circle at bottom right, rgba(138, 43, 226, 0.3), transparent 40%);
+            animation: cosmic-swirl 25s ease-in-out infinite alternate;
+            z-index: -1;
+        }
+
+        @keyframes cosmic-swirl {
+            from { transform: rotate(0deg) scale(1.5); opacity: 0.8; }
+            to { transform: rotate(360deg) scale(1.5); opacity: 1; }
+        }
+
+        .cinzel-font {
+            font-family: 'Cinzel', serif;
+            text-shadow: 0 0 10px rgba(224, 216, 240, 0.3);
+        }
+        .screen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
+            background-color: transparent;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 1s ease-in-out, visibility 1s;
+        }
+        .screen.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .premium-button {
+            background: linear-gradient(45deg, #D4AF37, #C0A02C);
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            color: #111;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.1);
+            transition: all 0.3s ease;
+            margin-top: 2rem;
+            padding: 0.75rem 2rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+        .premium-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.25);
+        }
+        .symbol-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+        .dice-five-layout {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            width: 300px;
+            height: 300px;
+            margin-top: 2rem;
+            justify-content: center;
+            align-items: center;
+        }
+        .symbol-card {
+            width: 90px;
+            height: 90px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .dice-five-layout .symbol-card[data-pos="1"] { grid-area: 1 / 1; }
+        .dice-five-layout .symbol-card[data-pos="2"] { grid-area: 1 / 3; }
+        .dice-five-layout .symbol-card[data-pos="3"] { grid-area: 3 / 1; }
+        .dice-five-layout .symbol-card[data-pos="4"] { grid-area: 3 / 3; }
+        .dice-five-layout .symbol-card[data-pos="5"] { grid-area: 2 / 2; }
+
+        .final-symbol {
+            width: 220px;
+            height: 220px;
+            opacity: 0;
+            transition: opacity 3s ease-in-out;
+            filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.5));
+        }
+        .final-symbol.fade-in {
+            opacity: 1;
+        }
+
+        .encouragement-text {
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.25rem;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .encouragement-text.visible {
+            opacity: 1;
+        }
+        
+        .loader {
+            display: flex;
+            position: relative;
+            width: 80px;
+            height: 80px;
+        }
+        .loader-symbol {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            animation: symbol-flash 2.5s linear infinite;
+        }
+        .loader-symbol:nth-child(1) { animation-delay: 0s; }
+        .loader-symbol:nth-child(2) { animation-delay: 0.5s; }
+        .loader-symbol:nth-child(3) { animation-delay: 1s; }
+        .loader-symbol:nth-child(4) { animation-delay: 1.5s; }
+        .loader-symbol:nth-child(5) { animation-delay: 2s; }
+
+        @keyframes symbol-flash {
+            0%, 100% { opacity: 0; transform: scale(0.8); }
+            10%, 40% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 5px rgba(224, 216, 240, 0.5));}
+            50%, 100% { opacity: 0; transform: scale(0.8); }
+        }
+
+        /* Warning Styles */
+        .warning-icon {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 1.5rem;
+            color: #ef4444; /* Red color for warning */
+        }
+        .warning-text {
+            color: #ef4444;
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+        .warning-button {
+            background: linear-gradient(45deg, #991b1b, #7f1d1d);
+            border-color: #ef4444;
+            color: #fecaca;
+        }
+        .warning-button:hover {
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Screen 1: Intro 1 -->
+    <div id="screen-1" class="screen active">
+        <h1 class="cinzel-font text-2xl md:text-3xl">This is a training tool to sharpen your perception.</h1>
+        <p class="mt-4 text-lg">Let's begin your practice session.</p>
+        <button onclick="showScreen('screen-2')" class="premium-button">Begin Training</button>
+    </div>
+
+    <!-- Screen 2: Intro 2 -->
+    <div id="screen-2" class="screen">
+        <h1 class="cinzel-font text-2xl md:text-3xl">First, we will calibrate your mental focus.</h1>
+        <button onclick="showScreen('screen-3')" class="premium-button">Next</button>
+    </div>
+
+    <!-- Screen 3: Choose Symbol -->
+    <div id="screen-3" class="screen">
+        <h1 class="cinzel-font text-2xl md:text-3xl">You will be shown 5 standard practice symbols.</h1>
+        <p class="mt-4 text-lg">Hold one clearly in your mind.</p>
+        <div id="symbol-choice-container" class="dice-five-layout"></div>
+        <button onclick="showScreen('screen-4')" class="premium-button">Focus Locked</button>
+    </div>
+
+    <!-- Screen 4: Mind Reading Intro -->
+    <div id="screen-4" class="screen">
+        <h1 class="cinzel-font text-2xl md:text-3xl">Excellent. Your target is set.</h1>
+        <p class="mt-4 text-lg">The system will now attempt to read your focus.</p>
+        <button onclick="showScreen('screen-5')" class="premium-button">Proceed</button>
+    </div>
+
+    <!-- Screen 5: Gradual Process -->
+    <div id="screen-5" class="screen">
+        <h1 class="cinzel-font text-2xl md:text-3xl">The perception exercise will now begin.</h1>
+        <p class="mt-4 text-lg">Maintain your concentration.</p>
+        <button onclick="startBinaryQuestions()" class="premium-button">Ready</button>
+    </div>
+
+    <!-- Screen 6: Binary Question (Dynamic) -->
+    <div id="screen-6" class="screen">
+        <h1 class="cinzel-font text-2xl md:text-3xl">The system detects a faint signal from this group.</h1>
+        <p class="mt-4 text-lg">Is your chosen symbol present?</p>
+        <div id="binary-question-container" class="symbol-container"></div>
+        <div class="flex gap-4">
+            <button onclick="handleBinaryAnswer(true)" class="premium-button">Yes</button>
+            <button onclick="handleBinaryAnswer(false)" class="premium-button">No</button>
+        </div>
+    </div>
+    
+    <!-- Loading Screen -->
+    <div id="screen-loading" class="screen">
+        <h1 class="cinzel-font text-2xl md:text-3xl mb-8">Processing...</h1>
+        <div id="loader-container" class="loader"></div>
+    </div>
+
+    <!-- Screen 7: Transition before final -->
+    <div id="screen-7" class="screen">
+        <h1 class="cinzel-font text-2xl md:text-3xl">Good. The signal strength is improving.</h1>
+        <p class="mt-4 text-lg">Your focus is sharpening.</p>
+        <button onclick="showScreen('screen-8')" class="premium-button">Next</button>
+    </div>
+
+    <!-- Screen 8: Final Instruction -->
+    <div id="screen-8" class="screen">
+        <h1 class="cinzel-font text-2xl md:text-3xl">The Final Test.</h1>
+        <p class="mt-4 text-lg">Clear your mind. Project the mental image of your symbol onto the blank screen.</p>
+        <button onclick="startFinalReveal()" class="premium-button">Project Image</button>
+    </div>
+    
+    <!-- Screen 9: Final Reveal -->
+    <div id="screen-9" class="screen">
+        <div id="final-reveal-container">
+            <!-- The chosen symbol will appear here -->
+        </div>
+        <p id="encouragement-1" class="encouragement-text cinzel-font">Concentrate...</p>
+        <p id="encouragement-2" class="encouragement-text cinzel-font">An image is beginning to form...</p>
+        <p id="encouragement-3" class="encouragement-text cinzel-font">Your focus is making it clearer...</p>
+        <p id="encouragement-4" class="encouragement-text cinzel-font">Success. Your projected thought.</p>
+    </div>
+
+    <!-- Fail Screen -->
+    <div id="screen-fail" class="screen">
+        <svg class="warning-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+        </svg>
+        <h1 class="cinzel-font text-2xl md:text-3xl warning-text">Mind Signal Disconnected</h1>
+        <p class="mt-4 text-lg max-w-md">This might be caused by a slight distraction or you forgot your chosen symbol.</p>
+        <button onclick="resetTrick()" class="premium-button warning-button">Try Again</button>
+    </div>
+
+    <footer class="fixed bottom-4 w-full text-center text-xs text-gray-700 cinzel-font z-10">
+        &copy; 2025 Mind's Eye Training Institute
+    </footer>
+
+
+    <script>
+        // --- Symbol Data ---
+        const symbols = [
+            { name: 'Circle', value: 1, pos: 1, draw: (ctx, s) => { ctx.arc(0, 0, s * 0.35, 0, Math.PI * 2); } },
+            { name: 'Cross', value: 2, pos: 2, draw: (ctx, s) => { ctx.moveTo(0, -s * 0.35); ctx.lineTo(0, s * 0.35); ctx.moveTo(-s * 0.35, 0); ctx.lineTo(s * 0.35, 0); } },
+            { name: 'Wavy Lines', value: 3, pos: 3, draw: (ctx, s) => { for (let i = -1; i <= 1; i++) { ctx.moveTo(-s * 0.3, s * 0.2 * i); ctx.quadraticCurveTo(-s * 0.15, s * 0.2 * i - s * 0.2, 0, s * 0.2 * i); ctx.quadraticCurveTo(s * 0.15, s * 0.2 * i + s * 0.2, s * 0.3, s * 0.2 * i); } } },
+            { name: 'Square', value: 4, pos: 4, draw: (ctx, s) => { ctx.rect(-s * 0.35, -s * 0.35, s * 0.7, s * 0.7); } },
+            { name: 'Star', value: 5, pos: 5, draw: (ctx, s) => { ctx.moveTo(0, -s * 0.35); for (let i = 1; i < 5; i++) { ctx.lineTo(Math.sin(i * 0.8 * Math.PI) * s * 0.35, -Math.cos(i * 0.8 * Math.PI) * s * 0.35); } ctx.closePath(); } }
+        ];
+        
+        const binaryGroups = [ [1, 3, 5], [2, 3], [4, 5] ];
+        let currentScreen = 'screen-1';
+        let chosenSymbolValue = 0;
+        let binaryQuestionIndex = 0;
+        let disconnectTimer = null; // Timer for the convincer
+        const STROKE_COLOR_NORMAL = '#e0d8f0';
+        const STROKE_COLOR_ACCENT = '#D4AF37';
+
+        function showScreen(screenId) {
+            const oldScreen = document.getElementById(currentScreen);
+            if (oldScreen) oldScreen.classList.remove('active');
+            const newScreen = document.getElementById(screenId);
+            if (newScreen) newScreen.classList.add('active');
+            currentScreen = screenId;
+        }
+
+        function drawSymbolToCanvas(symbol, canvas, size, color = STROKE_COLOR_NORMAL) {
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = size * dpr;
+            canvas.height = size * dpr;
+            canvas.style.width = `${size}px`;
+            canvas.style.height = `${size}px`;
+            ctx.scale(dpr, dpr);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = size / 25;
+            ctx.lineCap = 'round';
+            ctx.translate(size / 2, size / 2);
+            ctx.beginPath();
+            symbol.draw(ctx, size);
+            ctx.stroke();
+        }
+
+        function renderSymbols(containerId, symbolList) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            symbolList.forEach(symbol => {
+                const card = document.createElement('div');
+                card.className = 'symbol-card';
+                card.dataset.value = symbol.value;
+                card.dataset.pos = symbol.pos;
+                const canvas = document.createElement('canvas');
+                drawSymbolToCanvas(symbol, canvas, 90);
+                card.appendChild(canvas);
+                container.appendChild(card);
+            });
+        }
+
+        function populateLoader() {
+            const container = document.getElementById('loader-container');
+            container.innerHTML = '';
+            symbols.forEach(symbol => {
+                const canvas = document.createElement('canvas');
+                canvas.className = 'loader-symbol';
+                drawSymbolToCanvas(symbol, canvas, 80);
+                container.appendChild(canvas);
+            });
+        }
+
+        function showQuestionScreen() {
+            displayBinaryQuestion();
+            showScreen('screen-6');
+            if (disconnectTimer) clearTimeout(disconnectTimer);
+            disconnectTimer = setTimeout(() => {
+                showScreen('screen-fail');
+            }, 4000);
+        }
+
+        function startBinaryQuestions() {
+            chosenSymbolValue = 0;
+            binaryQuestionIndex = 0;
+            showScreen('screen-loading');
+            setTimeout(showQuestionScreen, 2500);
+        }
+
+        function displayBinaryQuestion() {
+            const symbolValuesToShow = binaryGroups[binaryQuestionIndex];
+            const symbolsToShow = symbols.filter(s => symbolValuesToShow.includes(s.value));
+            renderSymbols('binary-question-container', symbolsToShow);
+        }
+
+        function handleBinaryAnswer(isYes) {
+            if (disconnectTimer) clearTimeout(disconnectTimer);
+            if (isYes) {
+                chosenSymbolValue += Math.pow(2, binaryQuestionIndex);
+            }
+            binaryQuestionIndex++;
+            showScreen('screen-loading');
+            setTimeout(() => {
+                if (binaryQuestionIndex < binaryGroups.length) {
+                    showQuestionScreen();
+                } else {
+                    showScreen('screen-7');
+                }
+            }, 2500);
+        }
+        
+        function startFinalReveal() {
+            showScreen('screen-9');
+            
+            const msg1 = document.getElementById('encouragement-1');
+            const msg2 = document.getElementById('encouragement-2');
+            const msg3 = document.getElementById('encouragement-3');
+            const msg4 = document.getElementById('encouragement-4');
+
+            setTimeout(() => msg1.classList.add('visible'), 500);
+            setTimeout(() => { msg1.classList.remove('visible'); msg2.classList.add('visible'); }, 2000);
+            setTimeout(() => { msg2.classList.remove('visible'); msg3.classList.add('visible'); }, 3500);
+            
+            setTimeout(() => {
+                const container = document.getElementById('final-reveal-container');
+                container.innerHTML = '';
+                const correctSymbolData = symbols.find(s => s.value === chosenSymbolValue);
+                if (correctSymbolData) {
+                    const card = document.createElement('div');
+                    card.className = 'final-symbol';
+                    const canvas = document.createElement('canvas');
+                    drawSymbolToCanvas(correctSymbolData, canvas, 220, STROKE_COLOR_ACCENT);
+                    card.appendChild(canvas);
+                    container.appendChild(card);
+                    setTimeout(() => card.classList.add('fade-in'), 100);
+                }
+                msg3.classList.remove('visible');
+                msg4.classList.add('visible');
+            }, 5000);
+        }
+
+        function resetTrick() {
+            if (disconnectTimer) clearTimeout(disconnectTimer);
+            chosenSymbolValue = 0;
+            binaryQuestionIndex = 0;
+            showScreen('screen-1');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSymbols('symbol-choice-container', symbols);
+            populateLoader();
+        });
+    </script>
+</body>
+</html>
