@@ -128,20 +128,21 @@
         let symbolStates = [];
 
         /**
-         * Decodes a string from the custom encoding.
-         * @param {string} encodedText - The string to decode.
+         * Decodes a Base64 string.
+         * @param {string} encodedText - The Base64 string to decode.
          * @returns {string} The decoded string.
          */
         function customDecode(encodedText) {
-            const reverseCharMap = {
-                '@': 'a', '8': 'b', '[': 'c', ')': 'd', '3': 'e', 'F': 'f', '6': 'g', '#': 'h', '!': 'i', 'J': 'j', 'K': 'k', '1': 'l', 'M': 'm', '^': 'n', '0': 'o', 'P': 'p', '9': 'q', 'R': 'r', '$': 's', '+': 't', 'U': 'u', 'V': 'v', 'W': 'w', 'X': 'x', 'Y': 'y', '2': 'z', '_': ' '
-            };
-            let decoded = '';
-            for (let i = 0; i < encodedText.length; i++) {
-                const char = encodedText[i];
-                decoded += reverseCharMap[char] || char;
+            // Use built-in Base64 decoding to reverse the encoding process.
+            // It's important to wrap this in a try-catch block because
+            // atob() can throw an error if the input is not a valid Base64 string.
+            try {
+                return atob(encodedText);
+            } catch (e) {
+                console.error("Failed to decode Base64 string:", e);
+                // Return a default or empty string if decoding fails
+                return "Guest";
             }
-            return decoded;
         }
         
         /**
