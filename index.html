@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>ESP Test Online</title>
     
-    <!-- PWA and Mobile App Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -63,13 +62,10 @@
 <body>
 
     <div id="canvas-wrapper">
-        <!-- Bottom canvas for the symbols -->
         <canvas id="bottom-canvas"></canvas>
-        <!-- Top canvas for the opaque cover and erasing -->
         <canvas id="top-canvas"></canvas>
     </div>
 
-    <!-- Fail Modal -->
     <div id="failModal" class="fixed inset-0 bg-black bg-opacity-90 flex-col items-center justify-center hidden z-50 p-4 text-center">
         <p class="cinzel-font text-2xl text-white mb-8">You need to really channel your thought.<br>Seek ESP masters for help</p>
         <button id="practiceButton" class="premium-button text-white font-semibold px-6 py-3 rounded-lg">Take Practice Session</button>
@@ -415,8 +411,6 @@
                 let decoded = customDecode(decodeURIComponent(encodedName));
                 spectatorName = decoded.charAt(0).toUpperCase() + decoded.slice(1);
                 
-                // THE FIX: We ONLY replace the history. No more pushState here.
-                // This cleans the URL without adding a duplicate entry.
                 history.replaceState(null, '', window.location.pathname);
 
             } else {
@@ -439,10 +433,10 @@
             window.location.replace('practice.html');
         });
 
-        // This listener now correctly traps the back button only when needed.
-        window.addEventListener('popstate', function(event) {
-            history.pushState(null, '', window.location.pathname);
-        });
+        // THE FIX: This entire block has been removed to stop all interference with the back button.
+        // window.addEventListener('popstate', function(event) {
+        //     history.pushState(null, '', window.location.pathname);
+        // });
 
         window.onload = async function() {
             try {
