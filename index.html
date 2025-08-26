@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ESP Symbol Online</title>
+    <title>ESP Test Online</title>
     
     <!-- PWA and Mobile App Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -72,7 +72,7 @@
     <!-- Fail Modal -->
     <div id="failModal" class="fixed inset-0 bg-black bg-opacity-90 flex-col items-center justify-center hidden z-50 p-4 text-center">
         <p class="cinzel-font text-2xl text-white mb-8">You need to really channel your thought.<br>Seek ESP masters for help</p>
-        <button id="tryAgainButton" class="premium-button text-white font-semibold px-6 py-3 rounded-lg">Try Again</button>
+        <button id="practiceButton" class="premium-button text-white font-semibold px-6 py-3 rounded-lg">Take Practice Session</button>
     </div>
 
     <script>
@@ -82,7 +82,7 @@
         const topCanvas = document.getElementById('top-canvas');
         const topCtx = topCanvas.getContext('2d');
         const failModal = document.getElementById('failModal');
-        const tryAgainButton = document.getElementById('tryAgainButton');
+        const practiceButton = document.getElementById('practiceButton');
 
         // --- State Variables ---
         let isPointerDown = false; // Tracks if mouse/finger is down
@@ -507,11 +507,10 @@
 
         window.addEventListener('resize', setupCanvases);
 
-        // Modal Button Listener
-        tryAgainButton.addEventListener('click', () => {
-            failModal.classList.add('hidden');
-            failModal.classList.remove('flex');
-            resetBoard();
+        // Modal Button Listener - UPDATED
+        practiceButton.addEventListener('click', () => {
+            // Redirects to the practice session page
+            window.location.replace('practice.html');
         });
 
         // Prevent back navigation
