@@ -136,29 +136,16 @@
             opacity: 1;
         }
         
+        /* New Rotating Star Loader */
         .loader {
-            display: flex;
-            position: relative;
             width: 80px;
             height: 80px;
+            animation: spin 4s linear infinite;
         }
-        .loader-symbol {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            animation: symbol-flash 2.5s linear infinite;
-        }
-        .loader-symbol:nth-child(1) { animation-delay: 0s; }
-        .loader-symbol:nth-child(2) { animation-delay: 0.5s; }
-        .loader-symbol:nth-child(3) { animation-delay: 1s; }
-        .loader-symbol:nth-child(4) { animation-delay: 1.5s; }
-        .loader-symbol:nth-child(5) { animation-delay: 2s; }
 
-        @keyframes symbol-flash {
-            0%, 100% { opacity: 0; transform: scale(0.8); }
-            10%, 40% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 5px rgba(224, 216, 240, 0.5));}
-            50%, 100% { opacity: 0; transform: scale(0.8); }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         /* Warning Styles */
@@ -256,9 +243,9 @@
             <!-- The chosen symbol will appear here -->
         </div>
         <p id="encouragement-1" class="encouragement-text cinzel-font">Concentrate...</p>
-        <p id="encouragement-2" class="encouragement-text cinzel-font">An image is beginning to form...</p>
-        <p id="encouragement-3" class="encouragement-text cinzel-font">Your focus is making it clearer...</p>
-        <p id="encouragement-4" class="encouragement-text cinzel-font">Success. Your projected thought.</p>
+        <p id="encouragement-2" class="encouragement-text cinzel-font">It's beginning to form...</p>
+        <p id="encouragement-3" class="encouragement-text cinzel-font">Your're making it clearer...</p>
+        <p id="encouragement-4" class="encouragement-text cinzel-font">Success. Congratulations!</p>
     </div>
 
     <!-- Fail Screen -->
@@ -290,7 +277,7 @@
         let currentScreen = 'screen-1';
         let chosenSymbolValue = 0;
         let binaryQuestionIndex = 0;
-        let disconnectTimer = null; // Timer for the convincer
+        let disconnectTimer = null;
         const STROKE_COLOR_NORMAL = '#e0d8f0';
         const STROKE_COLOR_ACCENT = '#D4AF37';
 
@@ -337,21 +324,22 @@
         function populateLoader() {
             const container = document.getElementById('loader-container');
             container.innerHTML = '';
-            symbols.forEach(symbol => {
+            const starSymbol = symbols.find(s => s.name === 'Star');
+            if (starSymbol) {
                 const canvas = document.createElement('canvas');
-                canvas.className = 'loader-symbol';
-                drawSymbolToCanvas(symbol, canvas, 80);
+                drawSymbolToCanvas(starSymbol, canvas, 80);
                 container.appendChild(canvas);
-            });
+            }
         }
 
         function showQuestionScreen() {
             displayBinaryQuestion();
             showScreen('screen-6');
             if (disconnectTimer) clearTimeout(disconnectTimer);
+            // Updated disconnect timer to 10 seconds
             disconnectTimer = setTimeout(() => {
                 showScreen('screen-fail');
-            }, 4000);
+            }, 10000);
         }
 
         function startBinaryQuestions() {
