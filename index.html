@@ -408,17 +408,16 @@
         }
 
         function initialize() {
-            // UPDATED: Read the secret from the URL hash instead of a query parameter.
-            const encodedName = window.location.hash.substring(1); // .substring(1) removes the '#'
+            const encodedName = window.location.hash.substring(1); 
 
             if (encodedName) {
                 isPerformanceMode = true;
                 let decoded = customDecode(decodeURIComponent(encodedName));
                 spectatorName = decoded.charAt(0).toUpperCase() + decoded.slice(1);
                 
-                // These two lines still work perfectly to hide the secret and trap the back button.
+                // THE FIX: We ONLY replace the history. No more pushState here.
+                // This cleans the URL without adding a duplicate entry.
                 history.replaceState(null, '', window.location.pathname);
-                history.pushState(null, '', window.location.pathname);
 
             } else {
                 isPerformanceMode = false;
@@ -439,6 +438,8 @@
         practiceButton.addEventListener('click', () => {
             window.location.replace('practice.html');
         });
+
+        // This listener now correctly traps the back button only when needed.
         window.addEventListener('popstate', function(event) {
             history.pushState(null, '', window.location.pathname);
         });
