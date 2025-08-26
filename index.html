@@ -127,27 +127,15 @@
 
         let symbolStates = [];
 
-        /**
-         * Decodes a Base64 string.
-         * @param {string} encodedText - The Base64 string to decode.
-         * @returns {string} The decoded string.
-         */
         function customDecode(encodedText) {
-            // Use built-in Base64 decoding to reverse the encoding process.
-            // It's important to wrap this in a try-catch block because
-            // atob() can throw an error if the input is not a valid Base64 string.
             try {
                 return atob(encodedText);
             } catch (e) {
                 console.error("Failed to decode Base64 string:", e);
-                // Return a default or empty string if decoding fails
                 return "Guest";
             }
         }
         
-        /**
-         * A helper function to draw text on a canvas with automatic line breaks.
-         */
         function wrapText(context, text, x, y, maxWidth, lineHeight) {
             let words = text.split(' ');
             let line = '';
@@ -169,9 +157,6 @@
             return currentY; 
         }
 
-        /**
-         * Sets up both canvases.
-         */
         function setupCanvases() {
             const dpr = window.devicePixelRatio || 1;
             const rect = topCanvas.getBoundingClientRect();
@@ -187,9 +172,6 @@
             loadState();
         }
 
-        /**
-         * Draws the greeting text on the TOP canvas.
-         */
         function drawOverlayGreeting() {
             const clientWidth = topCanvas.clientWidth;
             const centerX = clientWidth / 2;
@@ -209,9 +191,6 @@
             wrapText(topCtx, instructionText, centerX, topTextMargin + lineSpacing, maxWidth, 28);
         }
 
-        /**
-         * Draws the symbols and vignette on the bottom canvas.
-         */
         function drawContentOnBottomCanvas() {
             const clientWidth = bottomCanvas.clientWidth;
             const clientHeight = bottomCanvas.clientHeight;
@@ -226,18 +205,17 @@
             const outerRadius = Math.sqrt(centerX * centerX + centerY * centerY);
 
             const gradient = bottomCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, outerRadius);
-            gradient.addColorStop(0, '#1a1a1a'); // Dark gray center
-            gradient.addColorStop(1, '#000000'); // Black edges
+            gradient.addColorStop(0, '#1a1a1a'); 
+            gradient.addColorStop(1, '#000000');
 
             bottomCtx.fillStyle = gradient;
             bottomCtx.fillRect(0, 0, clientWidth, clientHeight);
             
-            // --- Draw Symbols ---
             bottomCtx.strokeStyle = '#e0e0e0';
             bottomCtx.lineWidth = Math.min(clientWidth, clientHeight) / 100;
             bottomCtx.lineCap = 'round';
             
-            const symbolAreaYStart = 200; // Use a fixed start position for symbols
+            const symbolAreaYStart = 200; 
             const symbolAreaHeight = clientHeight - symbolAreaYStart - 20;
             const symbolAreaWidth = clientWidth;
             
@@ -271,11 +249,8 @@
             });
         }
 
-        /**
-         * Resets the board to its initial state.
-         */
         function resetBoard() {
-            modalIsQueued = false; // Reset the modal flag
+            modalIsQueued = false; 
             symbolStates = symbols.map(s => ({ 
                 value: s.value, 
                 touched: false,
@@ -284,14 +259,10 @@
             
             drawContentOnBottomCanvas();
             
-            // Make the top canvas fully transparent and draw the greeting on it
             topCtx.clearRect(0, 0, topCanvas.width, topCanvas.height);
             drawOverlayGreeting();
         }
 
-        /**
-         * Loads state from localStorage to see if the app is in "decoy" mode.
-         */
         function loadState() {
             const savedValue = localStorage.getItem(STORAGE_KEY);
             if (savedValue) {
@@ -309,9 +280,6 @@
             resetBoard();
         }
 
-        /**
-         * Covers a portion of the top canvas by drawing a stroke that matches the vignette.
-         */
         function coverWithStroke(x, y) {
             if (isRevealed) {
                 const protectedSymbol = symbolStates.find(s => s.value === protectedSymbolValue);
@@ -338,13 +306,9 @@
             topCtx.arc(x, y, ERASER_SIZE, 0, Math.PI * 2, false);
             topCtx.fill();
 
-            // Redraw the greeting on top of the erase stroke
             drawOverlayGreeting();
         }
 
-        /**
-         * Checks if the stroke has entered a symbol's area and marks it.
-         */
         function checkTouch(x, y) {
             if (isRevealed) return;
 
@@ -383,26 +347,13 @@
             }
         }
 
-        /**
-         * Handles the secret triple tap mechanism to reset the stored data.
-         * A valid triple tap must be quick and in the same location.
-         * @param {object} tapPos - The {x, y} position of the current tap.
-         */
         function handleSecretReset(tapPos) {
             const now = new Date().getTime();
-
-            // Add current tap to history
             tapHistory.push({ time: now, pos: tapPos });
-
-            // Filter out taps that are too old
             tapHistory = tapHistory.filter(tap => now - tap.time < TRIPLE_TAP_TIME_THRESHOLD);
 
-            // If we don't have enough taps, exit
-            if (tapHistory.length < 3) {
-                return;
-            }
+            if (tapHistory.length < 3) return;
 
-            // Check if all recent taps are in the same area by comparing to the first tap in the sequence
             const firstTapPos = tapHistory[0].pos;
             const allTapsInSameArea = tapHistory.every(tap => {
                 const distance = Math.hypot(tap.pos.x - firstTapPos.x, tap.pos.y - firstTapPos.y);
@@ -410,11 +361,9 @@
             });
 
             if (allTapsInSameArea) {
-                // If conditions are met, perform the reset
                 localStorage.removeItem(STORAGE_KEY);
-                tapHistory = []; // Clear history after successful reset
+                tapHistory = []; 
                 
-                // Visual feedback for the reset
                 document.body.style.backgroundColor = 'white';
                 setTimeout(() => {
                     document.body.style.backgroundColor = 'black';
@@ -426,12 +375,10 @@
             }
         }
 
-        // --- Event Listeners ---
         function handleStart(e) {
             isPointerDown = true;
             hasDragged = false;
             startPos = getPos(e);
-
             const currentPos = getPos(e);
             checkTouch(currentPos.x, currentPos.y);
             coverWithStroke(currentPos.x, currentPos.y);
@@ -440,27 +387,16 @@
         function handleMove(e) {
             if (!isPointerDown) return;
             e.preventDefault();
-            
             const currentPos = getPos(e);
             const distance = Math.hypot(currentPos.x - startPos.x, currentPos.y - startPos.y);
-
-            if (distance > DRAG_THRESHOLD) {
-                hasDragged = true;
-            }
-
+            if (distance > DRAG_THRESHOLD) hasDragged = true;
             checkTouch(currentPos.x, currentPos.y);
             coverWithStroke(currentPos.x, currentPos.y);
         }
 
         function handleEnd() {
             if (!isPointerDown) return;
-
-            // A tap is considered an interaction that hasn't been dragged
-            if (!hasDragged) {
-                // Pass the tap's starting position to the reset handler
-                handleSecretReset(startPos);
-            }
-            
+            if (!hasDragged) handleSecretReset(startPos);
             isPointerDown = false;
         }
 
@@ -468,22 +404,19 @@
             const rect = topCanvas.getBoundingClientRect();
             const clientX = e.clientX || e.touches[0].clientX;
             const clientY = e.clientY || e.touches[0].clientY;
-            return {
-                x: clientX - rect.left,
-                y: clientY - rect.top
-            };
+            return { x: clientX - rect.left, y: clientY - rect.top };
         }
 
-        // --- Initialize ---
         function initialize() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const encodedName = urlParams.get('id');
+            // UPDATED: Read the secret from the URL hash instead of a query parameter.
+            const encodedName = window.location.hash.substring(1); // .substring(1) removes the '#'
 
             if (encodedName) {
                 isPerformanceMode = true;
                 let decoded = customDecode(decodeURIComponent(encodedName));
                 spectatorName = decoded.charAt(0).toUpperCase() + decoded.slice(1);
                 
+                // These two lines still work perfectly to hide the secret and trap the back button.
                 history.replaceState(null, '', window.location.pathname);
                 history.pushState(null, '', window.location.pathname);
 
@@ -494,45 +427,32 @@
             setupCanvases();
         }
 
-        // Mouse Events
         window.addEventListener('mousedown', handleStart);
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('mouseup', handleEnd);
         window.addEventListener('mouseleave', handleEnd);
-
-        // Touch Events
         window.addEventListener('touchstart', handleStart, { passive: false });
         window.addEventListener('touchmove', handleMove, { passive: false });
         window.addEventListener('touchend', handleEnd);
         window.addEventListener('touchcancel', handleEnd);
-
         window.addEventListener('resize', setupCanvases);
-
-        // Modal Button Listener - UPDATED
         practiceButton.addEventListener('click', () => {
-            // Redirects to the practice session page
             window.location.replace('practice.html');
         });
-
-        // Prevent back navigation
         window.addEventListener('popstate', function(event) {
             history.pushState(null, '', window.location.pathname);
         });
 
-        // --- Start the application ---
         window.onload = async function() {
             try {
-                // Explicitly wait for the 'Cinzel' font to be ready at the sizes we use.
                 await document.fonts.load('40px Cinzel');
                 await document.fonts.load('20px Cinzel');
             } catch (err) {
                 console.error('Font could not be loaded, using fallback:', err);
             } finally {
-                // Now that fonts are ready (or have timed out), initialize the app.
                 initialize();
             }
         }
-
     </script>
 </body>
 </html>
